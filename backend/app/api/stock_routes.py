@@ -2,6 +2,7 @@ from fastapi import APIRouter # collection of api endpoints
 from database.db import SessionLocal
 from models.stock_data import StockData
 from models.stock import Stock
+from models.stocks_indicators import StocksIndicators
 
 router = APIRouter() # object router
  
@@ -45,3 +46,39 @@ def  get_stocks_list():
         ]
     finally:
         db.close()
+        
+@router.get("/stocks/{stock_id}/{start_date}/{end_date}")
+def get_stock_history(stock_id, start_date, end_date):
+    db = SessionLocal()
+    data = (
+        db.query(StockData, StocksIndicators)
+        .outerjoin(
+            StocksIndicators,
+            (StockData.stock_id == StocksIndicators.stock_id)
+            & (StockData.id == StocksIndicators.data_id)
+        )
+        .filter(
+            StockData.stock_id == stock_id,
+            StockData.date >= start_date,
+            StockData.date <= end_date
+        )
+        .order_by(StockData.date)
+        .all()
+    )
+    return [
+    {
+        **{
+            c.name: getattr(stock, c.name)
+            for c in StockData.__table__.columns
+        },
+        **(
+            {
+                c.name: getattr(indicator, c.name)
+                for c in StocksIndicators.__table__.columns
+            }
+            if indicator
+            else {}
+        )
+    }
+    for stock, indicator in data
+]

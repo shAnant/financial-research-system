@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, Float
+from sqlalchemy import Column, Integer, Text, Float, ForeignKey
 
 from database.base import Base
 
@@ -16,4 +16,4 @@ class StockData(Base):
     volume = Column(Float)
     adj_close = Column(Float)
     
-    stock_id = Column(Text)
+    stock_id = Column(Integer, ForeignKey("stock.id"))
