@@ -10,7 +10,7 @@ class Metrics(Base):
     statement_id = Column(Integer, ForeignKey("statement_type_table.id"))
     
     statement_type = relationship(
-        "StatementType",
+        "StatementTypeTable",
         back_populates="metrics"
     )
 

@@ -9,6 +9,6 @@ class StatementTypeTable(Base):
     statement_type = Column(Text)
     
     metrics = relationship(
-        "Metric",
+        "Metrics",
         back_populates="statement_type"
     )
