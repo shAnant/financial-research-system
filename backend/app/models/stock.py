@@ -12,3 +12,8 @@ class Stock(Base):
         "StocksIndicators",
         back_populates="stock"
     )
+    
+    financial_metrics = relationship(
+    "StockMetric",
+    back_populates="stock"
+    )
