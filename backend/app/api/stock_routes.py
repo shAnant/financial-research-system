@@ -6,6 +6,8 @@ from models.stocks_indicators import StocksIndicators
 from models.metrics import Metrics
 from models.statement_type_table import StatementTypeTable
 from models.stock_metric import StockMetric
+from models.news_feed import NewsFeed
+from models.news_sentiment import NewsSentiment
 
 router = APIRouter() # object router
 
@@ -122,8 +124,8 @@ def get_metrics(stock_name):
     return [
             {
                 "stock": stock.symbol,
-                "metric": metric.metric_name,  # adjust field name
-                "statement_type": statement.statement_type,  # adjust field name
+                "metric": metric.metric_name,
+                "statement_type": statement.statement_type,
                 "fiscal_year": stock_metric.fiscal_year,
                 "value": float(stock_metric.value)
                 if stock_metric.value is not None
@@ -131,3 +133,52 @@ def get_metrics(stock_name):
             }
             for stock, stock_metric, metric, statement in data
         ]
+
+@router.get("/stocks/news/{stock_name}")
+def get_news(stock_name):
+    stock_id = get_stock_id(stock_name)
+    db = SessionLocal()
+    try:
+        data = db.query(NewsFeed, Stock).join(
+            Stock, (Stock.id == NewsFeed.stock_id)
+        ).filter(
+            NewsFeed.stock_id ==stock_id
+        ).order_by(
+            NewsFeed.date
+        ).all()
+    finally:
+        db.close()
+     
+    return[
+        {
+            "id": news.id,
+            "stock": stock.symbol,
+            "content_id": news.content_id,
+            "title": news.title,
+            "summary": news.summary,
+            "date": news.date,
+            "url": news.url,
+            "source": news.source
+        }
+        for news, stock in data
+    ]
+    
+@router.get("/stocks/{news_feed_id}")
+def get_sentiment(news_feed_id):
+    db = SessionLocal()
+    try:
+        data = db.query(NewsSentiment).filter(NewsSentiment.news_feed_id == news_feed_id).all()
+    except Exception as e:
+        print(e)
+        return False
+    finally:
+        db.close()
+    
+    return [
+        {
+            "news_feed_id" : info.news_feed_id,
+            "label" : info.label,
+            "sentiment" : info.sentiment
+        }
+        for info in data
+    ]

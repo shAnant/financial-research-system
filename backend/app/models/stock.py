@@ -17,3 +17,8 @@ class Stock(Base):
     "StockMetric",
     back_populates="stock"
     )
+    
+    news_feed = relationship(
+        "NewsFeed",
+        back_populates="stock"
+    )
