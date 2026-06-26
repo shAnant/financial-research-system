@@ -8,6 +8,12 @@ from models.statement_type_table import StatementTypeTable
 from models.stock_metric import StockMetric
 from models.news_feed import NewsFeed
 from models.news_sentiment import NewsSentiment
+from services.analyzers.profitability import profitability_metrics
+from services.analyzers.balance_sheet_strength import balance_sheet_metrics
+from services.analyzers.cash_flow import cash_flow_metrics
+from services.analyzers.share_holder import share_holder_metrics
+from collections import defaultdict
+from services.analyzers.fundamental_analyzer import derives_metrics
 
 router = APIRouter() # object router
 
@@ -16,16 +22,11 @@ def get_stock_id(stock_name):
     db = SessionLocal()
     try:
         stock = db.query(Stock).filter(Stock.symbol == stock_name).first()
-        
-        if not stock:
-            return {"error":"Stock not found"}
-        
-        return stock.id
-    
+        return stock.id if stock else None
     finally:
         db.close()
  
-@router.get("/stocks/{stock_name}")
+@router.get("/stocks/{stock_name}/get_data")
 def get_stocks(stock_name):
     stock_id = get_stock_id(stock_name)
     db = SessionLocal()
@@ -55,7 +56,11 @@ def  get_stocks_list():
     db = SessionLocal()
     
     try:
-        stocks_list = db.query(Stock).all()
+        stocks_list = (
+                    db.query(Stock)
+                    .order_by(Stock.symbol.asc())
+                    .all()
+                )
         
         return [
             {
@@ -104,20 +109,20 @@ def get_stock_history(stock_name, start_date, end_date):
     for stock, indicator in data
 ]
     
-@router.get("/{stock_name}/metrics")
+@router.get("/stocks/{stock_name}/metrics")
 def get_metrics(stock_name):
     stock_id = get_stock_id(stock_name)
     db = SessionLocal()
     try:
         data = db.query(Stock, StockMetric, Metrics, StatementTypeTable).join(
-                                                                            StockMetric, (StockMetric.stock_id == Stock.id)
-                                                                        ).join(
-                                                                            Metrics, (Metrics.id == StockMetric.metric_id)
-                                                                        ).join(
-                                                                            StatementTypeTable, (StatementTypeTable.id == Metrics.statement_id)
-                                                                        ).filter(
-                                                                            Stock.id == stock_id
-                                                                        ).order_by(StockMetric.fiscal_year).all()
+            StockMetric, (StockMetric.stock_id == Stock.id)
+            ).join(
+                Metrics, (Metrics.id == StockMetric.metric_id)
+            ).join(
+                StatementTypeTable, (StatementTypeTable.id == Metrics.statement_id)
+            ).filter(
+                Stock.id == stock_id
+            ).order_by(StockMetric.fiscal_year).all()
     finally:
         db.close()
         
@@ -134,7 +139,7 @@ def get_metrics(stock_name):
             for stock, stock_metric, metric, statement in data
         ]
 
-@router.get("/stocks/news/{stock_name}")
+@router.get("/stocks/{stock_name}/news")
 def get_news(stock_name):
     stock_id = get_stock_id(stock_name)
     db = SessionLocal()
@@ -163,7 +168,7 @@ def get_news(stock_name):
         for news, stock in data
     ]
     
-@router.get("/stocks/{news_feed_id}")
+@router.get("/stocks/news/{news_feed_id}")
 def get_sentiment(news_feed_id):
     db = SessionLocal()
     try:
@@ -182,3 +187,184 @@ def get_sentiment(news_feed_id):
         }
         for info in data
     ]
+    
+    
+@router.get("/stocks/{stock_name}/profitability")
+def get_stock_profitability(stock_name):
+    db = SessionLocal()
+    stock_id = get_stock_id(stock_name)
+    try:
+        data = db.query(StockMetric, Metrics, StatementTypeTable, Stock).join(
+                Metrics, (StockMetric.metric_id == Metrics.id)
+            ).join(
+                StatementTypeTable, (Metrics.statement_id == StatementTypeTable.id)
+            ).join(
+                Stock,
+                (Stock.id == StockMetric.stock_id)
+            ).filter(
+                Metrics.metric_name.in_(profitability_metrics),
+                Stock.id == stock_id
+            ).all()
+    except Exception as e:
+        return {"error" : e}
+    finally:
+        db.close()
+    grouped = defaultdict(dict)
+    for stock_metric, metric, statement_type_table, stock in data:
+        grouped[metric.metric_name][stock_metric.fiscal_year] = stock_metric.value
+    
+    return [
+        {
+            "stock_id" :  stock.id,
+            "stock_name" : stock.symbol,
+            "metrics" : grouped
+        }
+    ]
+
+@router.get("/stocks/{stock_name}/balanceSheetStrength")
+def get_balance_sheet_strength(stock_name):
+    db = SessionLocal()
+    stock_id = get_stock_id(stock_name)
+    try:
+        data = db.query(StockMetric, Metrics, StatementTypeTable, Stock).join(
+                Metrics, (StockMetric.metric_id == Metrics.id)
+            ).join(
+                StatementTypeTable, (Metrics.statement_id == StatementTypeTable.id)
+            ).join(
+                Stock,
+                (Stock.id == StockMetric.stock_id)
+            ).filter(
+                Metrics.metric_name.in_(balance_sheet_metrics),
+                Stock.id == stock_id
+            ).all()
+    except Exception as e:
+        return {"error" : e}
+    finally:
+        db.close()
+    
+    grouped = defaultdict(dict)
+    for stock_metric, metric, statement_type_table, stock in data:
+        grouped[metric.metric_name][stock_metric.fiscal_year] = stock_metric.value
+    
+    return [
+        {
+            "stock_id" :  stock.id,
+            "stock_name" : stock.symbol,
+            "metrics" : grouped
+        }
+    ]
+    
+@router.get("/stocks/{stock_name}/cashFlowMetrics")
+def get_cash_flow_metrics(stock_name):
+    db = SessionLocal()
+    stock_id = get_stock_id(stock_name)
+    try:
+        data = db.query(StockMetric, Metrics, StatementTypeTable, Stock).join(
+                Metrics, (StockMetric.metric_id == Metrics.id)
+            ).join(
+                StatementTypeTable, (Metrics.statement_id == StatementTypeTable.id)
+            ).join(
+                Stock,
+                (Stock.id == StockMetric.stock_id)
+            ).filter(
+                Metrics.metric_name.in_(cash_flow_metrics),
+                Stock.id == stock_id
+            ).all()
+    except Exception as e:
+        return {"error" : e}
+    finally:
+        db.close()
+    
+    grouped = defaultdict(dict)
+    for stock_metric, metric, statement_type_table, stock in data:
+        grouped[metric.metric_name][stock_metric.fiscal_year] = stock_metric.value
+    
+    return [
+        {
+            "stock_id" :  stock.id,
+            "stock_name" : stock.symbol,
+            "metrics" : grouped
+        }
+    ]
+    
+@router.get("/stocks/{stock_name}/shareHolderMetrics")
+def get_share_holder_metrics(stock_name):
+    db = SessionLocal()
+    stock_id = get_stock_id(stock_name)
+    try:
+        data = db.query(StockMetric, Metrics, StatementTypeTable, Stock).join(
+                Metrics, (StockMetric.metric_id == Metrics.id)
+            ).join(
+                StatementTypeTable, (Metrics.statement_id == StatementTypeTable.id)
+            ).join(
+                Stock,
+                (Stock.id == StockMetric.stock_id)
+            ).filter(
+                Metrics.metric_name.in_(share_holder_metrics),
+                Stock.id == stock_id
+            ).all()
+    except Exception as e:
+        return {"error" : e}
+    finally:
+        db.close()
+    
+    grouped = defaultdict(dict)
+    for stock_metric, metric, statement_type_table, stock in data:
+        grouped[metric.metric_name][stock_metric.fiscal_year] = stock_metric.value
+    
+    return [
+        {
+            "stock_id" :  stock.id,
+            "stock_name" : stock.symbol,
+            "metrics" : grouped
+        }
+    ]
+    
+
+@router.get("/stocks/{stock_name}/{metric_name}")
+def get_metric(stock_name, metric_name):
+    db = SessionLocal()
+    stock_id = get_stock_id(stock_name)
+    try:
+        data = db.query(StockMetric, Metrics, StatementTypeTable, Stock).join(
+                Metrics, (StockMetric.metric_id == Metrics.id)
+            ).join(
+                StatementTypeTable, (Metrics.statement_id == StatementTypeTable.id)
+            ).join(
+                Stock,
+                (Stock.id == StockMetric.stock_id)
+            ).filter(
+                Metrics.metric_name == metric_name,
+                Stock.id == stock_id
+            ).all()
+    except Exception as e:
+        return {"error" : e}
+    finally:
+        db.close()
+        
+    if not data:
+        return {
+            "error": f"Metric '{metric_name}' not found for {stock_name}"
+        }
+    
+    grouped = defaultdict(dict)
+    for stock_metric, metric, statement_type_table, stock in data:
+        grouped[metric.metric_name][stock_metric.fiscal_year] = stock_metric.value
+    
+    if not grouped:
+        return {
+            "error" : "there is some issue in grouped variable"
+        }
+    
+    return [
+        {
+            "stock_id" :  stock_id,
+            "stock_name" : stock_name,
+            "metrics" : grouped
+        }
+    ]
+    
+@router.get("/fundamentals/{stock_name}")
+def get_fundamentals(stock_name):
+    result = derives_metrics(stock_name)
+    return result
