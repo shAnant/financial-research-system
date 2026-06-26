@@ -1,0 +1,1 @@
+cash_flow_metrics = ["Operating Cash Flow", "Free Cash Flow", "Capital Expenditure", "Investing Cash Flow", "Financing Cash Flow"]

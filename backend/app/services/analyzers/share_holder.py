@@ -1,0 +1,1 @@
+share_holder_metrics = ["Basic EPS", "Diluted EPS", "Share Issued", "Common Stock", "Treasury Stock", "Dividend Paid", "Common Stock Dividend Paid"]
