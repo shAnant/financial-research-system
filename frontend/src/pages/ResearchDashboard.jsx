@@ -8,6 +8,7 @@ import DashboardContent from "../components/DashboardContent";
 import { getStockPrice } from "../api/stockApi";
 import { getNews } from "../api/newsApi";
 import { getFundamentals } from "../api/fundamentalsApi";
+import { getLLMSummary } from "../api/llmApi";
 
 function ResearchDashboard() {
 
@@ -24,6 +25,10 @@ function ResearchDashboard() {
     const [fundamentals, setFundamentals] = useState(null);
 
     const [loading, setLoading] = useState(false);
+
+    const [llmSummary, setLLMSummary] = useState(null);
+
+    const [loadingSummary, setLoadingSummary] = useState(false);
 
     const handleAnalyze = async () => {
 
@@ -121,6 +126,37 @@ function ResearchDashboard() {
 
     };
 
+    const handleGenerateSummary = async () => {
+
+        if (!selectedStock) {
+            alert("Please select a stock.");
+            return;
+        }
+
+        try {
+
+            setLoadingSummary(true);
+
+            const data = await getLLMSummary(
+                selectedStock.symbol
+            );
+
+            setLLMSummary(data);
+
+        }
+        catch (error) {
+
+            console.error(error);
+
+        }
+        finally {
+
+            setLoadingSummary(false);
+
+        }
+
+    };
+
  return (
 
     <div className="p-8">
@@ -163,6 +199,9 @@ function ResearchDashboard() {
                 priceData={priceData}
                 news={news}
                 fundamentals={fundamentals}
+                llmSummary={llmSummary}
+                loadingSummary={loadingSummary}
+                onGenerateSummary={handleGenerateSummary}
             />
         )}
 

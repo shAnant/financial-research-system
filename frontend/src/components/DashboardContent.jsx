@@ -3,6 +3,7 @@ import PriceChart from "./PriceChart";
 import IndicatorsCard from "./IndicatorsCard";
 import NewsSection from "./NewsSection";
 import FundamentalsSection from "./FundamentalsSection";
+import LLMSummarySection from "./LLMSummarySection";
 
 function DashboardContent({
 
@@ -10,12 +11,21 @@ function DashboardContent({
 
     news,
 
-    fundamentals
+    fundamentals,
+
+    llmSummary,
+
+    loadingSummary,
+
+    onGenerateSummary
 
 }) {
 
-    if (!priceData || priceData.length === 0)
+    if (!priceData || priceData.length === 0) {
+
         return null;
+
+    }
 
     const latest = priceData[priceData.length - 1];
 
@@ -91,7 +101,7 @@ function DashboardContent({
 
             </div>
 
-            {/* Bottom */}
+            {/* News + Fundamentals */}
 
             <div className="grid grid-cols-2 gap-6">
 
@@ -108,6 +118,18 @@ function DashboardContent({
                 />
 
             </div>
+
+            {/* AI Summary */}
+
+            <LLMSummarySection
+
+                summary={llmSummary}
+
+                loading={loadingSummary}
+
+                onGenerate={onGenerateSummary}
+
+            />
 
         </div>
 
