@@ -14,6 +14,8 @@ from services.analyzers.cash_flow import cash_flow_metrics
 from services.analyzers.share_holder import share_holder_metrics
 from collections import defaultdict
 from services.analyzers.fundamental_analyzer import derives_metrics
+from services.analyzers.get_summary import get_stock_summary
+from services.LLM.generate_summary import summary
 
 router = APIRouter() # object router
 
@@ -368,3 +370,13 @@ def get_metric(stock_name, metric_name):
 def get_fundamentals(stock_name):
     result = derives_metrics(stock_name)
     return result
+
+
+@router.get("/summary/{stock_name}")
+def get_summary(stock_name):
+    data = get_stock_summary(stock_name)
+    return data
+
+@router.get("/llm/summary/{stock_name}")
+def get_llm_summary(stock_name):
+    return summary(stock_name)
